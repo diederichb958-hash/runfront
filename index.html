@@ -1,0 +1,464 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>RunFront</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/maplibre-gl@4.7.1/dist/maplibre-gl.css">
+<script src="https://cdn.jsdelivr.net/npm/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+:root{--pk:#fff;--cy:#fff;--sf:#111;--sf2:#262626;--mu:#ffffff99;--tb:calc(56px + env(safe-area-inset-bottom,0px))}
+*{box-sizing:border-box;margin:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;background:#000;overflow:hidden;font:600 15px/1.25 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;color:#fff}
+button{font:inherit;color:inherit;border:0;background:none;cursor:pointer}
+small{color:var(--mu);font-size:12px;font-weight:600}
+#map,#ov,#pad{position:absolute;left:0;right:0;top:0;bottom:var(--tb)}
+#ov{z-index:3;pointer-events:none;overflow:visible;width:100%;height:calc(100% - var(--tb))}
+#ov polyline{fill:none;stroke-linecap:round;stroke-linejoin:round}#ov .cs{stroke:#000;opacity:.85}#ov .ch{stroke:#fff;stroke-width:1.8;opacity:.8}#ov .hit{stroke:transparent;stroke-width:34;pointer-events:stroke}
+#pad{z-index:4;touch-action:none;display:none;cursor:crosshair}
+.me{width:16px;height:16px;background:#fff;border:3px solid #000;border-radius:50%;animation:p 1.6s infinite}
+@keyframes p{0%,100%{box-shadow:0 0 0 4px #ffffff55}50%{box-shadow:0 0 0 12px #ffffff22}}
+.maplibregl-ctrl-attrib{font-size:10px!important}
+#mine{position:absolute;left:12px;top:calc(12px + env(safe-area-inset-top,0px));z-index:5;background:#000b;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border-radius:99px;padding:8px 14px;display:flex;align-items:center;gap:8px;font-size:13px}
+#mine b{font-weight:800}#mine .bar{width:56px;height:5px;border-radius:3px;background:#ffffff26;overflow:hidden}#mine .bar i{display:block;height:100%;width:0;background:#fff;transition:width .8s}
+.fb{position:absolute;right:10px;bottom:calc(var(--tb) + 16px);z-index:5;display:flex;flex-direction:column;gap:14px;align-items:center;transition:bottom .3s cubic-bezier(.2,.9,.3,1)}
+.rb{display:flex;flex-direction:column;align-items:center;gap:3px;font-size:11px;font-weight:700;text-shadow:0 1px 3px #000}
+.rb i{width:46px;height:46px;border-radius:50%;background:#000b;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);display:grid;place-items:center;font:800 15px system-ui;transition:transform .15s,background .2s}
+.rb:active i{transform:scale(.88)}.rb.on i{background:#fff;color:#000}.rb.on svg{fill:#000}.rb svg{width:24px;height:24px;fill:#fff}
+#tb{position:absolute;left:0;right:0;bottom:0;height:var(--tb);padding-bottom:env(safe-area-inset-bottom,0px);z-index:70;background:#000;display:flex;align-items:center;justify-content:space-around;border-top:1px solid #ffffff14}
+.tab{flex:1;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:10px;font-weight:700;color:var(--mu)}.tab svg{width:24px;height:24px;fill:currentColor}.tab.on{color:#fff}
+#dw{flex:1;display:grid;place-items:center;height:100%}#dw span{width:46px;height:32px;border-radius:9px;background:#fff;color:#000;font:700 26px/30px system-ui;text-align:center;transition:transform .2s}#dw.on span{transform:rotate(45deg);background:#000;color:#fff;box-shadow:0 0 0 2px #fff}
+#card{position:absolute;left:0;right:0;bottom:var(--tb);z-index:6;border-radius:16px 16px 0 0;padding:8px 16px 16px;background:var(--sf);box-shadow:0 -8px 30px #0009;transform:translateY(110%);transition:transform .3s cubic-bezier(.2,.9,.3,1)}#card.on{transform:none}
+.gh{display:block;width:36px;height:4px;border-radius:2px;background:#ffffff40;margin:0 auto 12px}
+.r{display:flex;align-items:center;gap:10px;margin-bottom:12px}.r b{font-size:20px;font-weight:800;flex:1}
+.t{font:800 11px system-ui;padding:4px 8px;border-radius:5px}
+.row{display:flex;gap:10px}.st{display:grid;grid-template-columns:repeat(3,1fr);text-align:center;margin-bottom:14px}.st b{display:block;font-size:20px;font-weight:800}
+.btn{position:relative;overflow:hidden;height:46px;padding:0 20px;border-radius:6px;background:#fff;color:#000;font-weight:700;flex:1;transition:transform .15s,opacity .15s}.btn:active{transform:scale(.97);opacity:.85}.btn.g{background:var(--sf2);color:#fff;flex:0 0 auto}.t{background:#fff!important;color:#000!important}#map canvas{filter:grayscale(1) invert(1) brightness(1.8) contrast(1.05)}
+.rp{position:absolute;border-radius:50%;background:#fff4;transform:scale(0);animation:rp .5s ease-out forwards;pointer-events:none}@keyframes rp{to{transform:scale(1);opacity:0}}
+#toast{position:absolute;left:50%;top:calc(64px + env(safe-area-inset-top,0px));transform:translate(-50%,-20px);background:#000c;color:#fff;padding:9px 16px;border-radius:8px;z-index:100;opacity:0;transition:.25s;pointer-events:none;white-space:nowrap;font-size:14px}#toast.on{opacity:1;transform:translate(-50%,0)}
+.bar2{height:6px;border-radius:3px;background:#ffffff1f;margin-top:5px;overflow:hidden}.bar2 u{display:block;height:100%;border-radius:3px}
+#pg{position:absolute;left:0;right:0;top:0;bottom:var(--tb);background:#000;z-index:40;overflow:auto}
+.ph{position:sticky;top:0;z-index:2;background:#000;padding:calc(14px + env(safe-area-inset-top,0px)) 16px 10px;display:flex;justify-content:center;gap:24px;border-bottom:1px solid #ffffff14}.ph b{font-size:17px;font-weight:800}
+.ph button{font-size:17px;font-weight:700;color:var(--mu);padding-bottom:4px;border-bottom:2px solid transparent}.ph button.on{color:#fff;border-color:#fff}
+.rw{display:flex;align-items:center;gap:12px;padding:12px 16px}.rw .nm{flex:1;min-width:0}.rw>i{width:22px;font-style:normal;color:var(--mu);text-align:center;font-weight:800}
+.th{width:52px;height:52px;border-radius:8px;background:var(--sf);flex:none;display:grid;place-items:center}.th svg{width:80%;height:80%}
+.av{width:88px;height:88px;border-radius:50%;margin:0 auto;overflow:hidden;background:var(--sf2)}.av.s{width:44px;height:44px;margin:0}.av svg{width:100%;height:100%}
+.pf{text-align:center;padding:22px 16px 6px}.pf h2{font-size:17px;margin:10px 0 2px}.pst{display:flex;justify-content:center;margin:14px 0}.pst div{width:96px}.pst b{display:block;font-size:19px;font-weight:800}
+.g3{display:grid;grid-template-columns:repeat(3,1fr);gap:2px;margin-top:10px}.tl{aspect-ratio:3/4;background:linear-gradient(160deg,#2a2b36,#0b0c12);position:relative;display:grid;place-items:center}.tl svg{width:78%;height:78%}.tl .t{position:absolute;left:6px;top:6px}.tl small{position:absolute;left:8px;bottom:6px;color:#fff;font-weight:800;font-size:13px}
+.empty{color:var(--mu);text-align:center;padding:50px 24px}
+:root{--tx:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 .07 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");--rs:var(--tx),linear-gradient(180deg,#363636,#161616);--ed:inset 0 1px 0 #ffffff2e,inset 0 -2px 0 #000a,0 3px 8px #0009}
+#tb{background:var(--tx),linear-gradient(180deg,#262626,#090909);box-shadow:inset 0 1px 0 #ffffff26,0 -6px 16px #000a}
+#card{background:var(--tx),linear-gradient(180deg,#2e2e2e,#121212);box-shadow:inset 0 1px 0 #ffffff2e,0 -10px 30px #000b}
+#mine,.rb i{background:var(--rs);box-shadow:var(--ed)}
+.btn{background:linear-gradient(#fff,#bdbdbd);border-radius:8px;box-shadow:inset 0 1px 0 #fff,0 3px 0 #6b6b6b,0 6px 10px #0008}.btn:active{transform:translateY(2px);box-shadow:inset 0 1px 0 #fff,0 1px 0 #6b6b6b}
+.btn.g{background:linear-gradient(#3c3c3c,#1c1c1c);box-shadow:inset 0 1px 0 #ffffff30,0 3px 0 #000,0 6px 10px #0008}
+#dw span{background:linear-gradient(#fff,#c4c4c4);box-shadow:inset 0 1px 0 #fff,0 3px 0 #666}
+.th,.tl,.av{box-shadow:inset 0 2px 6px #000,0 1px 0 #ffffff1a}.bar2{box-shadow:inset 0 1px 3px #000}
+#pg{background:var(--tx),radial-gradient(120% 60% at 50% 0,#2a2a2a,#0a0a0a)}
+.ph{background:var(--tx),linear-gradient(#262626,#0d0d0d);box-shadow:inset 0 1px 0 #ffffff20}
+.bio{margin:10px auto 0;max-width:280px;font-weight:500;color:#ddd;white-space:pre-wrap}
+.win{margin:14px;border:1px solid #4a4a4a;border-radius:8px;overflow:hidden;background:#0c0c0c;box-shadow:0 6px 18px #000a,inset 0 1px 0 #ffffff26}
+.wt{display:flex;justify-content:space-between;align-items:center;padding:6px 10px;font:700 12px system-ui;background:var(--tx),linear-gradient(#545454,#262626);border-bottom:1px solid #000;box-shadow:inset 0 1px 0 #ffffff3a}
+.wt button{font-weight:700;font-size:12px;padding:2px 8px;border-radius:4px;background:linear-gradient(#444,#222);box-shadow:inset 0 1px 0 #ffffff30,0 1px 0 #000}
+.wb{background:var(--tx),linear-gradient(#141414,#0a0a0a);box-shadow:inset 0 2px 8px #000}
+.grp{padding:8px 12px;font-size:12px;font-weight:800;color:var(--mu);background:#1a1a1a;border-bottom:1px solid #000}
+.bd{display:flex;align-items:center;gap:10px;padding:9px 12px;border-bottom:1px solid #1c1c1c}.bd:active{background:#222}
+.ini{width:34px;height:34px;border-radius:50%;background:linear-gradient(#555,#222);display:grid;place-items:center;font-weight:800;box-shadow:inset 0 1px 0 #ffffff40,0 1px 3px #000;flex:none}
+.x{width:28px;height:28px;border-radius:50%;background:#2a2a2a;font-weight:800}.add{display:flex;gap:8px;padding:10px 12px;align-items:center}
+input,textarea{width:100%;font:inherit;color:#fff;background:#050505;border:1px solid #444;border-radius:6px;padding:9px 10px;box-shadow:inset 0 2px 5px #000;outline:0;margin:4px 0 10px}.add input,.snd input{margin:0}input:focus,textarea:focus{border-color:#fff}
+.chat{height:100%;padding:10px;display:flex}.chat .win{margin:0;flex:1;display:flex;flex-direction:column;min-height:0}.cb{flex:1;display:flex;flex-direction:column;min-height:0}
+#log{flex:1;overflow-y:auto;padding:10px 12px;font-weight:500;font-size:14px}.ln{margin-bottom:6px;word-break:break-word}.ln small{opacity:.6}.sys{color:var(--mu);font-size:12px;margin-bottom:10px;font-style:italic}
+.snd{display:flex;gap:8px;padding:8px;border-top:1px solid #333;background:#161616}
+.dwrap{position:relative;display:flex}#tools{position:absolute;right:62px;top:0;display:flex;gap:10px;opacity:0;pointer-events:none;transform:translateX(24px) scale(.8);transition:.22s cubic-bezier(.2,.9,.3,1.3)}#tools.open{opacity:1;pointer-events:auto;transform:none}#tools .rb svg{fill:none;stroke:#fff;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+#cmpi{fill:none;stroke:#fff;stroke-width:2;stroke-linejoin:round;stroke-linecap:round}
+.rc{margin:12px 14px;border-radius:12px;overflow:hidden;background:#111;border:1px solid #333;opacity:.6;cursor:pointer;transition:transform .15s}.rc:active{transform:scale(.98)}
+.rc.dn{opacity:1;border-color:var(--c);box-shadow:0 0 0 1px var(--c),0 6px 20px #000b}
+.mt{position:relative;height:130px;overflow:hidden;background:#111}.stg{position:absolute;left:50%;top:0;width:480px;height:130px;margin-left:-240px}
+.stg img{position:absolute;width:256px;height:256px;filter:grayscale(1) brightness(.65) contrast(.9)}.mt.dn .stg img{filter:saturate(1.15)}
+.stg svg{position:absolute;left:0;top:0}.mo{fill:none;stroke:#000;stroke-width:9;stroke-linecap:round;stroke-linejoin:round;opacity:.7}
+.mc{fill:none;stroke:var(--c);stroke-width:5;stroke-linecap:round;stroke-linejoin:round;opacity:.55}.mt.dn .mc{opacity:1;filter:drop-shadow(0 0 4px var(--c))}
+.ck{position:absolute;right:10px;top:10px;width:26px;height:26px;border-radius:50%;background:var(--c);color:#000;display:grid;place-items:center;font-size:15px}
+.ri{display:flex;align-items:center;gap:10px;padding:10px 12px}.ri .nm{flex:1;min-width:0}.hdv{padding:14px 16px 2px;font-weight:800;color:var(--mu);font-size:13px}
+.pol{width:84px;height:84px;border-radius:6px;overflow:hidden;border:3px solid #fff;box-shadow:0 5px 12px #000a;transform:rotate(-7deg);flex:none;background:#111;position:relative}.pol .mo{stroke-width:7}.pol .mc{stroke-width:3.5}
+.big{width:54px;height:54px;border-radius:12px;background:#000;border:2px solid var(--c);color:var(--c);font:900 26px/50px system-ui;text-align:center;letter-spacing:-1px;box-shadow:0 0 12px var(--c),inset 0 0 8px #0008}
+#qa{position:absolute;left:50%;bottom:calc(var(--tb) + 12px);transform:translate(-50%,16px) scale(.92);opacity:0;pointer-events:none;z-index:75;width:260px;border-radius:14px;padding:10px;background:var(--tx),linear-gradient(180deg,#2e2e2e,#121212);border:1px solid #444;box-shadow:inset 0 1px 0 #ffffff2e,0 10px 30px #000c;transition:.22s cubic-bezier(.2,.9,.3,1.2)}#qa.on{opacity:1;pointer-events:auto;transform:translate(-50%,0)}
+#qa .qh{padding:2px 6px 4px;font-size:12px;color:var(--mu)}#qa .qh b{display:block;color:#fff;font-size:15px}#qa .btn{width:100%;margin-top:10px;flex:none}#qa .btn[disabled]{opacity:.35}
+</style>
+</head><body>
+<div id="map"></div><svg id="ov"></svg><div id="pad"></div>
+<div id="mine"><b id="pt">0 pts</b><small id="mc">Idle</small><div class="bar"><i id="mb"></i></div></div>
+<div class="fb"><button class="rb" id="t3d" style="display:none" aria-label="Back to flat map"><i><svg id="cmpi" viewBox="0 0 24 24"><path d="M4 17l4-7h12l-4 7z" fill="#ffffff40"/><path d="M2 13.5h20M12 3v5"/></svg></i></button><button class="rb" id="loc" aria-label="Center on me"><i><svg viewBox="0 0 24 24"><path d="M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8zm-1-6v3.1A7 7 0 0 0 5.1 11H2v2h3.1A7 7 0 0 0 11 18.9V22h2v-3.1a7 7 0 0 0 5.9-5.9H22v-2h-3.1A7 7 0 0 0 13 5.1V2z"/></svg></i></button><div class="dwrap"><div id="tools"><button class="rb" data-tool="free" aria-label="Freehand"><i><svg viewBox="0 0 24 24"><path d="M3 17c3-9 5-9 7-4s5 3 8-6"/></svg></i></button><button class="rb" data-tool="circle" aria-label="Circle"><i><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/></svg></i></button><button class="rb" data-tool="square" aria-label="Square"><i><svg viewBox="0 0 24 24"><rect x="4.5" y="4.5" width="15" height="15" rx="1.5"/></svg></i></button></div><button class="rb dwb" id="dw2" aria-label="Draw route"><i><svg viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.8 9.94l-3.75-3.75L3 17.25zM20.7 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg></i></button></div></div>
+<div id="card"></div><div id="toast"></div>
+<div id="qa"></div><nav id="tb"><button class="tab on" data-p="map"><svg viewBox="0 0 24 24"><path d="M4 11 12 4l8 7v9h-5v-6H9v6H4z"/></svg>Home</button><button class="tab" data-p="ranks"><svg viewBox="0 0 24 24"><path d="M4 20V11h4v9zm6 0V4h4v16zm6 0v-6h4v6z"/></svg>Ranks</button><button id="dw" aria-label="Run options"><span>+</span></button><button class="tab" data-p="runs"><svg viewBox="0 0 24 24"><path d="M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zm1 4v5l4 2-1 1.7-5-2.7V7z"/></svg>Runs</button><button class="tab" data-p="me"><svg viewBox="0 0 24 24"><path d="M12 12a4.5 4.5 0 1 0 0-9 4.5 4.5 0 0 0 0 9zm0 2c-4.4 0-8 2.2-8 5v2h16v-2c0-2.8-3.6-5-8-5z"/></svg>Me</button></nav>
+<div id="pg" hidden></div>
+<script>
+window.addEventListener('error', function(e) {
+  console.error('RunFront error:', e.message || e.error || e);
+});
+window.addEventListener('unhandledrejection', function(e) {
+  console.error('RunFront async error:', e.reason);
+});
+if(typeof maplibregl==='undefined'||typeof supabase==='undefined'){
+  document.body.innerHTML='<main style="min-height:100%;display:grid;place-items:center;padding:28px;background:#090909;color:#fff;font:16px/1.5 system-ui;text-align:center"><section style="max-width:520px"><h2 style="font-size:24px;margin-bottom:12px">RunFront could not start</h2><p style="color:#bbb">A required app library did not load. Check your internet connection, then reopen this page in Chrome. If this keeps happening, the CDN may be blocked or unavailable.</p><p style="margin-top:16px;color:#888;font-size:13px">Missing: '+(typeof maplibregl==='undefined'?'MapLibre ':'')+(typeof supabase==='undefined'?'Supabase':'')+'</p><button onclick="location.reload()" style="margin-top:20px;padding:12px 20px;border-radius:8px;background:#fff;color:#000;font-weight:700">Try again</button></section></main>';
+  throw new Error('RunFront dependency failed to load');
+}
+const $=s=>document.querySelector(s),KM=111320,KY=110540,TC=['','#25F4EE','#3DA5FF','#7B8CFF','#C77DFF','#FF4F9A','#FE2C55','#FF8A00','#FFD60A'],TX=t=>[1,7,8].includes(t)?'#000':'#fff',LB=['','F','D','C','B','A','S','S+','SS'],MI=.621371;
+const band=mi=>mi<=2?'Low tier':mi<=8?'Medium tier':'High tier';
+const dist=(a,b)=>Math.hypot((b[0]-a[0])*Math.cos(a[1]*Math.PI/180)*KM,(b[1]-a[1])*KY);
+let S={loops:[],pts:0,runs:[],tick:Date.now(),me:{name:'runner',bio:''},friends:[],msgs:{}};try{S=Object.assign(S,JSON.parse(localStorage.getItem('rf')))}catch(e){}
+const save=()=>{try{localStorage.setItem('rf',JSON.stringify(S))}catch(e){}};
+/* Tiers: anything under 8 mi is T1 (T2 only if the terrain is tough). 8+ mi climbs T3-T6. */
+/* Tier list: low (F, D) up to 2 mi, medium (C, B, A) over 2 up to 8 mi, high (S, S+, SS) over 8 mi. Tough terrain moves a run up one tier inside its band. */
+const tierOf=(km,ter=0)=>{const mi=km*MI;let t=mi<1?1:mi<=2?2:mi<4?3:mi<6?4:mi<=8?5:mi<13.1?6:mi<20?7:8;if(ter>=25)t=Math.min(mi<=2?2:mi<=8?5:8,t+1);return t},rate=t=>[0,1,2,5,12,30,100,250,600][t]||0;
+const mi1=km=>(km*MI).toFixed(km*MI<10?2:1),paceMi=spk=>spk?fmtT(spk/MI):'–';
+const dLabel=n=>n<25?'Easy':n<45?'Moderate':n<65?'Hard':'Brutal';
+function turnsOf(p){const s=[];p.forEach(q=>{if(!s.length||dist(s[s.length-1],q)>=80)s.push(q)});const h=(a,b)=>Math.atan2((b[0]-a[0])*Math.cos(a[1]*Math.PI/180),b[1]-a[1])*180/Math.PI;let n=0;for(let i=2;i<s.length;i++){let d=Math.abs(h(s[i-1],s[i])-h(s[i-2],s[i-1]));if(d>180)d=360-d;if(d>60)n++}return n}
+function scoreOf(km,gain,turns){const mi=Math.max(km*MI,.1),dp=Math.min(55,mi*2.1),cp=gain==null?0:Math.min(30,gain/mi/8),tp=Math.min(15,turns/mi*1.5);return{ter:cp+tp,score:Math.round(dp+cp+tp)}}
+async function elevGain(p){const n=Math.min(100,p.length),ix=[];for(let i=0;i<n;i++)ix.push(Math.round(i*(p.length-1)/Math.max(1,n-1)));
+ const la=ix.map(i=>p[i][1].toFixed(5)).join(','),lo=ix.map(i=>p[i][0].toFixed(5)).join(',');
+ const ac=new AbortController(),to=setTimeout(()=>ac.abort(),7000),r=await fetch('https://api.open-meteo.com/v1/elevation?latitude='+la+'&longitude='+lo,{signal:ac.signal});clearTimeout(to);const e=(await r.json()).elevation;if(!e||!e.length)throw 0;
+ let ref=e[0],g=0;e.forEach(v=>{if(v-ref>2){g+=v-ref;ref=v}else if(ref-v>2)ref=v});return g*3.28084}
+function rescore(d){const o=scoreOf(d.km,d.gain,d.turns);d.score=o.score;d.ter=o.ter;d.tier=tierOf(d.km,o.ter)}
+const diffHTML=d=>`<div style="display:flex;justify-content:space-between;margin-bottom:6px"><span>Difficulty</span><span>${d.loading?'Reading terrain…':dLabel(d.score)+' · '+d.score}</span></div><div class="bar2" style="margin:0 0 14px"><u style="width:${d.score}%;background:#fff;transition:width .5s"></u></div>`;
+const statsHTML=d=>`<div class="st"><span><b>${d.gain==null?(d.loading?'…':'–'):Math.round(d.gain)+' ft'}</b><small>climb</small></span><span><b>${d.turns}</b><small>turns</small></span><span><b>${rate(d.tier)}</b><small>pts/hr</small></span></div>`;
+S.loops.forEach(l=>{l.tier=tierOf(l.km,l.ter||0)});
+const fmtT=s=>{s=Math.round(s);return Math.floor(s/60)+':'+String(s%60).padStart(2,'0')};
+let tt;const toast=m=>{const e=$('#toast');e.textContent=m;e.classList.add('on');clearTimeout(tt);tt=setTimeout(()=>e.classList.remove('on'),2400)};
+
+/* ========== SUPABASE AUTH + CLOUD SYNC ========== */
+const SUPABASE_URL = 'https://qpfqyfshhcvnaslcslzz.supabase.co';
+// Public anon/publishable key only. Never place a service-role key in browser HTML.
+const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFwZnF5ZnNoaGN2bmFzbGNzbHp6In0.xOE4ANievm7JhmzKpWvc0gyHi7iTZ3KLtrhNguLTTYc';
+const sbClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON, {
+  auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true }
+});
+let currentUser = null;
+let cloudSyncTimer = null;
+let cloudLoadPromise = null;
+let cloudReady = false;
+
+function cloudError(label, error) {
+  console.error('RunFront ' + label + ':', error);
+  const message = error && (error.message || error.details || error.hint);
+  toast(label + ' failed' + (message ? ': ' + String(message).slice(0, 100) : ''));
+}
+function queueCloudSync(delay=900) {
+  if (!currentUser) return;
+  clearTimeout(cloudSyncTimer);
+  cloudSyncTimer = setTimeout(() => syncToCloud().catch(e => cloudError('Cloud sync', e)), delay);
+}
+async function syncToCloud() {
+  const user = currentUser;
+  if (!user) return;
+  const profile = {
+    id: user.id,
+    name: S.me.name || 'runner',
+    bio: S.me.bio || '',
+    pts: Number(S.pts) || 0
+  };
+  const pr = await sbClient.from('profiles').upsert(profile, { onConflict: 'id' });
+  if (pr.error) throw pr.error;
+
+  const loopRows = S.loops.map(l => ({
+    id: String(l.id), user_id: user.id, name: l.name || 'Loop', path: l.p || [],
+    km: Number(l.km) || 0, tier: Number(l.tier) || 1,
+    gain: Number(l.gain) || 0, turns: Number(l.turns) || 0,
+    score: Number(l.score) || 0, ter: Number(l.ter) || 0, claimed: !!l.claimed
+  }));
+  if (loopRows.length) {
+    const lr = await sbClient.from('loops').upsert(loopRows, { onConflict: 'id' });
+    if (lr.error) throw lr.error;
+  }
+
+  const runRows = S.runs.map(r => ({
+    client_id: 'r' + String(r.t) + '-' + String(r.id),
+    user_id: user.id, loop_id: String(r.id),
+    sec: Number(r.sec) || 0, km: Number(r.km) || 0,
+    created_at: new Date(Number(r.t) || Date.now()).toISOString()
+  }));
+  if (runRows.length) {
+    const rr = await sbClient.from('runs').upsert(runRows, { onConflict: 'user_id,client_id' });
+    if (rr.error) throw rr.error;
+  }
+}
+
+async function signInWithGoogle() {
+  try {
+    const redirectTo = location.origin + location.pathname;
+    const { error } = await sbClient.auth.signInWithOAuth({
+      provider: 'google',
+      options: { redirectTo }
+    });
+    if (error) cloudError('Google sign-in', error);
+  } catch (e) { cloudError('Google sign-in', e); }
+}
+
+async function signOut() {
+  try {
+    clearTimeout(cloudSyncTimer);
+    if (currentUser) await syncToCloud();
+    const { error } = await sbClient.auth.signOut();
+    if (error) throw error;
+    currentUser = null;
+    cloudReady = false;
+    save();
+    goP('me');
+    toast('Signed out');
+  } catch (e) { cloudError('Sign out', e); }
+}
+
+async function loadFromCloud() {
+  if (cloudLoadPromise) return cloudLoadPromise;
+  cloudLoadPromise = (async () => {
+    const { data: { user }, error: userError } = await sbClient.auth.getUser();
+    if (userError) throw userError;
+    currentUser = user;
+    if (!user) return;
+
+    const [profileRes, loopsRes, runsRes] = await Promise.all([
+      sbClient.from('profiles').select('*').eq('id', user.id).maybeSingle(),
+      sbClient.from('loops').select('*').eq('user_id', user.id),
+      sbClient.from('runs').select('*').eq('user_id', user.id)
+    ]);
+    if (profileRes.error) throw profileRes.error;
+    if (loopsRes.error) throw loopsRes.error;
+    if (runsRes.error) throw runsRes.error;
+
+    const remoteLoops = (loopsRes.data || []).map(l => ({
+      id: String(l.id), name: l.name || 'Loop', p: l.path || [], km: Number(l.km) || 0,
+      tier: Number(l.tier) || 1, gain: l.gain == null ? null : Number(l.gain),
+      turns: Number(l.turns) || 0, score: Number(l.score) || 0,
+      ter: Number(l.ter) || 0, claimed: !!l.claimed
+    })).filter(l => Array.isArray(l.p) && l.p.length >= 2);
+
+    const mergedLoops = new Map(S.loops.map(l => [String(l.id), l]));
+    remoteLoops.forEach(l => mergedLoops.set(String(l.id), l));
+    S.loops = [...mergedLoops.values()];
+
+    const remoteRuns = (runsRes.data || []).map(r => ({
+      id: String(r.loop_id), sec: Number(r.sec) || 0, km: Number(r.km) || 0,
+      t: new Date(r.created_at).getTime() || Date.now()
+    }));
+    const runKey = r => String(r.id) + ':' + String(r.t);
+    const mergedRuns = new Map(S.runs.map(r => [runKey(r), r]));
+    remoteRuns.forEach(r => mergedRuns.set(runKey(r), r));
+    S.runs = [...mergedRuns.values()];
+
+    if (profileRes.data) {
+      S.me = { name: profileRes.data.name || S.me.name || 'runner', bio: profileRes.data.bio || '' };
+      S.pts = Number(profileRes.data.pts) || Number(S.pts) || 0;
+    } else {
+      const name = user.user_metadata?.full_name || user.email?.split('@')[0] || S.me.name || 'runner';
+      S.me.name = S.me.name && S.me.name !== 'runner' ? S.me.name : name;
+    }
+    save();
+    cloudReady = true;
+    await syncToCloud();
+    refresh();
+    accrue();
+    if (document.querySelector('.tab.on')?.dataset.p === 'me') goP('me');
+    toast('Cloud sync connected');
+  })();
+  try { return await cloudLoadPromise; }
+  finally { cloudLoadPromise = null; }
+}
+
+sbClient.auth.getSession().then(({ data: { session }, error }) => {
+  if (error) return cloudError('Session restore', error);
+  if (session) loadFromCloud().catch(e => cloudError('Cloud load', e));
+}).catch(e => cloudError('Session restore', e));
+
+sbClient.auth.onAuthStateChange((event) => {
+  if (event === 'SIGNED_IN') queueMicrotask(() => loadFromCloud().catch(e => cloudError('Cloud load', e)));
+  if (event === 'SIGNED_OUT') { currentUser = null; cloudReady = false; }
+});
+
+const osmStyle={
+  version:8,
+  name:'OpenStreetMap',
+  sources:{
+    osm:{
+      type:'raster',
+      tiles:[
+        'https://a.tile.openstreetmap.org/{z}/{x}/{y}.png',
+        'https://b.tile.openstreetmap.org/{z}/{x}/{y}.png',
+        'https://c.tile.openstreetmap.org/{z}/{x}/{y}.png'
+      ],
+      tileSize:256,
+      minzoom:0,
+      maxzoom:19,
+      attribution:'© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors'
+    }
+  },
+  layers:[{id:'osm',type:'raster',source:'osm'}]
+};
+
+const map=new maplibregl.Map({
+  container:'map',
+  style:osmStyle,
+  center:(()=>{try{return JSON.parse(localStorage.getItem('rfloc'))||[-73.9855,40.758]}catch(e){return[-73.9855,40.758]}})(),
+  zoom:15.5,
+  pixelRatio:1,
+  maxPitch:75,
+  attributionControl:{compact:true}
+});
+map.on('error',e=>{if(!window._me){window._me=1;toast('Map tiles blocked')}});
+let tool=null,lastTool='free',shp=null,drag=false,dl=0,sel=null,mode=null,draft=null,dwOn=false,pts=[],down=false,here=null,dot=null,run=null,on3d=false,ready=false;
+
+function accrue(){const n=Date.now(),h=(n-S.tick)/36e5;S.tick=n;S.loops.forEach(l=>{if(l.claimed)S.pts+=rate(l.tier)*h});save();const c=S.loops.filter(l=>l.claimed).length;$('#mb').style.width=Math.min(100,Math.log10(1+S.pts)/4*100)+'%';$('#mc').textContent=c?c+' mining':'Idle';$('#pt').textContent=Math.floor(S.pts).toLocaleString()+' pts'}
+setInterval(accrue,20000);
+
+const fc=()=>({type:'FeatureCollection',features:S.loops.map(l=>({type:'Feature',properties:{id:l.id,c:TC[l.tier],s:l.id===sel?1:0,k:l.claimed?1:0},geometry:{type:'LineString',coordinates:l.p}}))});
+const line=c=>({type:'FeatureCollection',features:c&&c.length>1?[{type:'Feature',properties:{},geometry:{type:'LineString',coordinates:c}}]:[]});
+function refresh(){if(!ready)return;const P=c=>c.map(q=>{const o=map.project(q);return o.x.toFixed(1)+','+o.y.toFixed(1)}).join(' ');
+ const ln=(c,col,w,id)=>{const pp=P(c);return `<polyline points="${pp}" class="cs" style="stroke-width:${w*1.9}"/>${w>=8?`<polyline points="${pp}" transform="translate(-3 -3)" style="stroke:#25F4EE;stroke-width:${w};opacity:.9"/>`:''}<polyline points="${pp}" style="stroke:${col};stroke-width:${w};filter:drop-shadow(0 0 5px ${col})"/><polyline points="${pp}" class="ch"/>${id?`<polyline points="${pp}" class="hit" data-id="${id}"/>`:''}`};
+ const dot=(q,col)=>{const o=map.project(q);return `<circle cx="${o.x.toFixed(1)}" cy="${o.y.toFixed(1)}" r="8" fill="#fff" stroke="${col}" stroke-width="4"/>`};
+ let h='';S.loops.forEach(l=>{if(l.id!==sel)h+=`<g opacity="${l.claimed?1:.5}">`+ln(l.p,TC[l.tier],5,l.id)+'</g>'});
+ const L=S.loops.find(l=>l.id===sel);if(L)h+=ln(L.p,TC[L.tier],8,L.id)+dot(L.p[0],TC[L.tier]);
+ const c=draft?draft.p:(shp?shapePts(shp):pts);if(c&&c.length>1)h+=ln(c,'#FE2C55',8)+dot(c[0],'#FE2C55');
+ $('#ov').innerHTML=h}
+$('#ov').addEventListener('click',e=>{if(dwOn||run)return;const id=e.target.dataset&&e.target.dataset.id;if(id){sel=id;mode='loop';card();refresh()}});
+setTimeout(()=>{ready=true;map.on('move',refresh);map.on('resize',refresh);refresh();watch();accrue();if(!S.loops.length)setTimeout(()=>toast('Tap Draw to sketch your first route'),700);setTimeout(()=>{if(first)ipLocate()},4000)},0);
+
+function ipLocate(){return fetch('https://ipwho.is/').then(r=>r.json()).then(j=>{if(!j||!j.latitude)throw 0;if(first&&!here){const c=[j.longitude,j.latitude];try{localStorage.setItem('rfloc',JSON.stringify(c))}catch(e){}map.flyTo({center:c,zoom:14,duration:900});toast('Approximate location'+(j.city?' · '+j.city:''))}}).catch(()=>toast('Location blocked'))}
+function put(p){here=[p.lng,p.lat];try{localStorage.setItem('rfloc',JSON.stringify(here))}catch(e){}if(!dot){const e=document.createElement('div');e.className='me';dot=new maplibregl.Marker({element:e}).setLngLat(here).addTo(map)}else dot.setLngLat(here)}
+let wid=null,first=true;function watch(){if(wid!==null||!navigator.geolocation)return;wid=navigator.geolocation.watchPosition(p=>{if(p.coords.accuracy>(first?2000:60))return;const q=[p.coords.longitude,p.coords.latitude];put({lng:q[0],lat:q[1]});if(first){first=false;map.jumpTo({center:q})}if(run&&!run.sim)onFix(q)},e=>{toast(e&&e.code===1?'Location blocked for this page':'GPS unavailable');if(!here)ipLocate()},{enableHighAccuracy:true,maximumAge:2000})}
+$('#loc').onclick=()=>{const go=(x,y)=>map.flyTo({center:[x,y],zoom:Math.max(map.getZoom(),16),duration:800});
+ if(here)return go(here[0],here[1]);if(!navigator.geolocation)return toast('GPS not supported');toast('Finding you…');
+ navigator.geolocation.getCurrentPosition(p=>{put({lng:p.coords.longitude,lat:p.coords.latitude});go(p.coords.longitude,p.coords.latitude)},()=>{toast('GPS blocked, using approximate');ipLocate().then(()=>{})},{enableHighAccuracy:true,timeout:10000});watch()};
+
+const nb=()=>((map.getBearing()+180)%360+360)%360-180;
+let in3d=false,sb=0;
+const flat=()=>{in3d=false;map.touchZoomRotate.enable()};
+map.on('rotatestart',e=>{if(e.originalEvent)sb=nb()});
+map.on('rotate',e=>{if(!e.originalEvent||in3d||Math.abs(nb()-sb)<12)return;in3d=true;map.touchZoomRotate.enable({around:'center'});const p0=map.getPitch(),t0=performance.now();(function st(t){const k=Math.min(1,(t-t0)/400);map.setPitch(p0+(60-p0)*k);if(k<1)requestAnimationFrame(st)})(t0)});
+map.on('pitchend',()=>{if(in3d&&map.getPitch()<3)flat()});
+map.on('move',()=>{const v=map.getPitch()>3||Math.abs(nb())>3;$('#t3d').style.display=v?'':'none';0});
+$('#t3d').onclick=()=>{flat();map.easeTo({pitch:0,bearing:0,duration:600})};
+
+const MPP=()=>{const c=map.getCenter();return 78271.52*Math.cos(c.lat*Math.PI/180)/Math.pow(2,map.getZoom())};
+const off=(c,dx,dy)=>[c[0]+dx/(KM*Math.cos(c[1]*Math.PI/180)),c[1]+dy/KY];
+function shapePts(h){const n=h.t==='circle'?72:4;const a=[];for(let i=0;i<n;i++){const t=h.t==='circle'?i*2*Math.PI/n:[[-1,-1],[1,-1],[1,1],[-1,1]][i];a.push(h.t==='circle'?off(h.c,h.r*Math.cos(t),h.r*Math.sin(t)):off(h.c,h.r*t[0],h.r*t[1]))}a.push(a[0]);return a}
+function shapeWP(h){const a=[];if(h.t==='circle')for(let i=0;i<16;i++){const t=i*Math.PI/8;a.push(off(h.c,h.r*Math.cos(t),h.r*Math.sin(t)))}else[[-1,-1],[0,-1],[1,-1],[1,0],[1,1],[0,1],[-1,1],[-1,0]].forEach(v=>a.push(off(h.c,h.r*v[0],h.r*v[1])));a.push(a[0]);return a}
+function placeInfo(){const L=shp.t==='circle'?2*Math.PI*shp.r:8*shp.r;toast('≈ '+(L/1000*MI).toFixed(1)+' mi · pinch to resize, drag to move')}
+function setDraw(o,t){dwOn=o;tool=o?(t||lastTool):null;if(o)lastTool=tool;shp=null;$('#tools').classList.remove('open');$('#pad').style.display=o?'block':'';document.querySelectorAll('.dwb').forEach(b=>b.classList.toggle('on',o));
+ if(o){map.dragPan.disable();map.touchZoomRotate.disable();map.getCanvas().style.cursor='crosshair';sel=null;draft=null;pts=[];mode=null;
+  iftool==='free';toast('Drag to draw your route')}else{const c=map.getCenter();shp={t:tool,c:[c.lng,c.lat],r:90*MPP()};mode='place';card();placeInfo()}}
+ else{map.dragPan.enable();map.touchZoomRotate.enable();map.getCanvas().style.cursor=''}refresh()}
+document.querySelectorAll('.dwb').forEach(b=>b.onclick=()=>{if(run)return;goP('map');if(dwOn){pts=[];setDraw(false)}else $('#tools').classList.toggle('open')});
+$('#tools').onclick=e=>{const b=e.target.closest('[data-tool]');if(b){draft=null;setDraw(true,b.dataset.tool)}};
+const ll=e=>{const r=$('#map').getBoundingClientRect(),l=map.unproject([e.clientX-r.left,e.clientY-r.top]);return[l.lng,l.lat]},pad=$('#pad');
+const ptr=new Map();let lastD=0;const pd=()=>{const v=[...ptr.values()];return v.length<2?0:Math.hypot(v[0][0]-v[1][0],v[0][1]-v[1][1])};
+pad.onpointerdown=e=>{if(!dwOn||mode==='snap')return;e.preventDefault();pad.setPointerCapture(e.pointerId);
+ if(tool==='free'){down=true;dl=0;pts=[ll(e)];refresh();return}
+ ptr.set(e.pointerId,[e.clientX,e.clientY]);lastD=pd();if(ptr.size===1){const r=$('#map').getBoundingClientRect(),o=map.project(shp.c);drag=Math.hypot(e.clientX-r.left-o.x,e.clientY-r.top-o.y)<shp.r/MPP()+40}};
+pad.onpointermove=e=>{if(mode==='snap')return;if(tool==='free'){if(!down)return;const q=ll(e),dd=dist(pts[pts.length-1],q);if(dd>6){pts.push(q);dl+=dd;refresh();toast((dl/1000*MI).toFixed(2)+' mi')}return}
+ if(!shp||!ptr.has(e.pointerId))return;const o=ptr.get(e.pointerId),nx=e.clientX,ny=e.clientY;ptr.set(e.pointerId,[nx,ny]);
+ if(ptr.size>=2){const d=pd();if(lastD>0)shp.r=Math.max(60,Math.min(8000,shp.r*d/lastD));lastD=d;placeInfo();refresh();return}
+ if(drag){const cp=map.project(shp.c),n=map.unproject([cp.x+nx-o[0],cp.y+ny-o[1]]);shp.c=[n.lng,n.lat]}else map.panBy([o[0]-nx,o[1]-ny],{animate:false});refresh()};
+pad.onpointerup=pad.onpointercancel=e=>{if(tool==='free'){if(!down)return;down=false;finishFree();return}ptr.delete(e.pointerId);lastD=pd();drag=false};
+pad.onwheel=e=>{if(!dwOn||!shp||mode==='snap')return;e.preventDefault();shp.r=Math.max(60,Math.min(8000,shp.r*Math.exp(-e.deltaY*.0015)));placeInfo();refresh()};
+async function snap(wp){const c=wp.map(q=>q[0].toFixed(5)+','+q[1].toFixed(5)).join(';');
+ for(const pf of['driving','foot']){try{const ac=new AbortController(),to=setTimeout(()=>ac.abort(),15000);const r=await fetch('https://routing.openstreetmap.de/routed-foot/route/v1/'+pf+'/'+c+'?overview=full&geometries=geojson',{signal:ac.signal});clearTimeout(to);const j=await r.json();if(j.code==='Ok'&&j.routes&&j.routes[0])return j.routes[0].geometry.coordinates}catch(e){}}return null}
+async function build(wp,fb){mode='snap';card();refresh();toast('Snapping to streets…');const g=await snap(wp);let src=g;if(!g||g.length<2){toast("Couldn't load streets, using your line");src=fb}endDraw(src)}
+async function finishFree(){if(pts.length<5){pts=[];toast('Too short');setDraw(false);return}const raw=pts.concat([pts[0]]);let len=0;for(let i=1;i<raw.length;i++)len+=dist(raw[i-1],raw[i]);
+ const st=Math.max(150,len/28),wp=[raw[0]];let ac=0;for(let i=1;i<raw.length;i++){ac+=dist(raw[i-1],raw[i]);if(ac>=st){wp.push(raw[i]);ac=0}}if(dist(wp[wp.length-1],raw[0])>20)wp.push(raw[0]);await build(wp,raw)}
+function endDraw(src){let p=src||pts.concat([pts[0]]);const q=[p[0]];for(let i=1;i<p.length;i++){const a=q[q.length-1],b=p[i],d=dist(a,b);if(d>25){const n=Math.ceil(d/25);for(let j=1;j<=n;j++)q.push([a[0]+(b[0]-a[0])*j/n,a[1]+(b[1]-a[1])*j/n])}else q.push(b)}
+ let km=0;for(let i=1;i<q.length;i++)km+=dist(q[i-1],q[i])/1000;pts=[];if(km<.3){toast('Too short');setDraw(false);return}
+ const p2=q.length>2500?q.filter((_,i)=>i%Math.ceil(q.length/2500)===0):q;
+ const d={p:p2,km,turns:turnsOf(p2),gain:null,loading:true};rescore(d);draft=d;setDraw(false);mode='draft';card();refresh();
+ elevGain(p2).then(g=>{d.gain=g},()=>{d.gain=null;toast('Elevation unavailable')}).finally(()=>{d.loading=false;rescore(d);if(draft===d&&mode==='draft')card()})}
+
+function card(){const c=$('#card'),L=S.loops.find(l=>l.id===sel);let h='';
+ if(mode==='draft')h=`<div class="r"><div class="pol">${mapThumb(draft,true,120,84,84,64)}</div><div style="flex:1"><b style="font-size:26px;display:block">${mi1(draft.km)} mi</b><small>${band(draft.km*MI)}</small></div><div class="big" style="--c:${TC[draft.tier]}">${LB[draft.tier]}</div></div>${diffHTML(draft)}${statsHTML(draft)}<div class="row"><button class="btn g" id="rd">Redo</button><button class="btn g" id="dr">Directions</button><button class="btn pulse" id="sv">Save</button></div>`;
+ else if(mode==='loop'&&L){const b=S.runs.filter(r=>r.id===L.id).sort((a,b)=>a.sec/a.km-b.sec/b.km)[0];h=`<div class="r"><span class="t" style="background:${TC[L.tier]};color:${TX(L.tier)}">${LB[L.tier]}</span><b>${L.name}</b><small>${mi1(L.km)} mi${b?' · '+paceMi(b.sec/b.km)+'/mi':''}</small></div>${L.score!=null?diffHTML(L)+statsHTML(L):''}<div class="row"><button class="btn g" id="sm">Sim</button><button class="btn g" id="dl">Delete</button><button class="btn g" id="dr" aria-label="Directions" style="padding:0 14px"><svg viewBox="0 0 24 24" width="20" height="20" fill="#fff"><path d="M12 2 4.5 20.3l.7.7L12 18l6.8 3 .7-.7z"/></svg></button><button class="btn pulse" id="go">${L.claimed?'Run':'Run'}</button></div>`}
+ else if(mode==='run')h=`<div class="st"><span><b id="rt">0:00</b><small>time</small></span><span><b id="rk">0.00</b><small>mi</small></span><span><b id="rp">–</b><small>/mi</small></span></div><button class="btn" id="sp">Stop</button>`;
+ if(mode==='place')h=`<div class="r"><b>${shp?shp.t==='circle'?'Circle':'Square':''}</b><small>Pinch to resize · drag to move</small></div><div class="row"><button class="btn g" id="pc">Cancel</button><button class="btn" id="pp">Place &amp; snap to streets</button></div>`;if(mode==='snap')h='<div class="r"><b>Snapping to streets…</b></div>';c.innerHTML=h?'<i class="gh"></i>'+h:'';c.classList.toggle('on',!!h);document.querySelector('.fb').style.bottom=h?`calc(var(--tb) + ${c.offsetHeight+14}px)`:''}
+$('#card').addEventListener('click',e=>{const q=e.target.closest('button')?.id;if(q==='pc')setDraw(false);if(q==='pp'&&shp)build(shapeWP(shp),shapePts(shp));const id=e.target.closest('button')?.id;if(!id)return;
+ if(id==='rd'){draft=null;mode=null;card();setDraw(true)}
+ if(id==='sv'){if(S.loops.filter(l=>!l.claimed).length>=3)return toast('3 unfinished routes max · finish or delete one first');S.loops.push({id:'l'+Date.now(),name:'Loop '+(S.loops.length+1),p:draft.p,km:draft.km,tier:draft.tier,gain:draft.gain,turns:draft.turns,score:draft.score,ter:draft.ter,claimed:false});sel=null;draft=null;mode=null;save();queueCloudSync();card();refresh();toast('Saved to Runs')}
+ if(id==='dl'){const deletedId=String(sel);S.loops=S.loops.filter(l=>String(l.id)!==deletedId);sel=null;mode=null;save();if(currentUser)sbClient.from('loops').delete().eq('id',deletedId).eq('user_id',currentUser.id).then(({error})=>{if(error)cloudError('Route delete',error)});card();refresh();accrue()}
+ if(id==='dr'){const T=draft||S.loops.find(l=>l.id===sel);if(!T)return;let d=T.p[0];if(here){let m=1e12;T.p.forEach(q=>{const x=dist(here,q);if(x<m){m=x;d=q}})}else{watch();toast('Using the route start')}window.open('https://www.google.com/maps/dir/?api=1&destination='+d[1].toFixed(6)+','+d[0].toFixed(6),'_blank')}
+ if(id==='go')startHere();if(id==='sm')start(true);if(id==='sp')stop(true)});
+document.addEventListener('pointerdown',e=>{const b=e.target.closest('.btn,.b');if(!b)return;const r=b.getBoundingClientRect(),d=Math.max(r.width,r.height)*2,p=document.createElement('span');p.className='rp';p.style.cssText=`width:${d}px;height:${d}px;left:${e.clientX-r.left-d/2}px;top:${e.clientY-r.top-d/2}px`;b.style.position='relative';b.style.overflow='hidden';b.appendChild(p);setTimeout(()=>p.remove(),600)});
+
+function start(sim){const L=S.loops.find(l=>l.id===sel);if(!L||run)return;if(!sim&&!here){watch();return toast('Waiting for GPS')}
+ run={L,t0:Date.now(),d:0,last:null,v:new Set(),sim,ss:0};mode='run';card();map.flyTo({center:L.p[0],zoom:16.5,duration:900});
+ if(sim){let i=0;run.iv=setInterval(()=>{const a=L.p[Math.min(i,L.p.length-1)];if(i>0)run.ss+=dist(L.p[i-1],a)/3;put({lng:a[0],lat:a[1]});onFix(a);i++;if(i>L.p.length+1)stop(false)},45)}
+ run.ui=setInterval(upd,500)}
+const secs=()=>run.sim?run.ss:(Date.now()-run.t0)/1000;
+function upd(){if(!run||!$('#rt'))return;const s=secs(),km=run.d/1000;$('#rt').textContent=fmtT(s);$('#rk').textContent=(km*MI).toFixed(2);$('#rp').textContent=km>.05?paceMi(s/km):'–'}
+function onFix(q){if(!run)return;if(run.last)run.d+=dist(run.last,q);run.last=q;run.L.p.forEach((p,i)=>{if(dist(q,p)<35)run.v.add(i)});upd();
+ if(run.v.size>=run.L.p.length*.9&&run.d>=run.L.km*850&&dist(q,run.L.p[0])<45)stop(false)}
+function stop(manual){if(!run)return;const r=run;run=null;clearInterval(r.ui);clearInterval(r.iv);const s=r.sim?r.ss:(Date.now()-r.t0)/1000,km=r.d/1000,done=r.v.size>=r.L.p.length*.9&&r.d>=r.L.km*850;
+ mode='loop';card();
+ if(!done){toast('Loop not closed');return}
+ accrue();S.runs.push({id:r.L.id,sec:Math.round(s),km:+km.toFixed(2),t:Date.now()});const L=S.loops.find(l=>l.id==r.L.id);const was=L.claimed;L.claimed=true;save();queueCloudSync();accrue();card();refresh();toast(was?'✓ '+fmtT(s)+' · '+(km*MI).toFixed(2)+' mi':'Mining started')}
+
+const pg=$('#pg');let rk='g';
+const RUNSVG='<svg viewBox="0 0 48 48"><rect width="48" height="48" fill="#2a2b36"/><circle cx="28" cy="13" r="3.2" fill="#fff"/><g stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" fill="none"><path d="M26 18 L22 28"/><path d="M25 20 L31 25"/><path d="M25 20 L17 22"/><path d="M22 28 L28 34 L27 41"/><path d="M22 28 L16 35 L10 33"/></g></svg>';
+function thumb(p,col){let a=1e9,b=-1e9,c=1e9,d=-1e9;p.forEach(q=>{a=Math.min(a,q[0]);b=Math.max(b,q[0]);c=Math.min(c,q[1]);d=Math.max(d,q[1])});const k=Math.cos((c+d)/2*Math.PI/180),m=Math.max((b-a)*k,d-c)||1e-9,st=Math.max(1,Math.floor(p.length/80));
+ const pp=p.filter((_,i)=>i%st===0).map(q=>(10+(q[0]-a)*k/m*80).toFixed(1)+','+(90-(q[1]-c)/m*80).toFixed(1)).join(' ');return`<svg viewBox="0 0 100 100"><polyline points="${pp}" fill="none" stroke="#25F4EE" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" transform="translate(-1.5 -1.5)"/><polyline points="${pp}" fill="none" stroke="${col}" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></svg>`}
+const chip=t=>`<span class="t" style="background:${TC[t]};color:${TX(t)}">${LB[t]}</span>`;
+const PGS={
+ ranks(){return rk==='g'?`<div class="rw"><i>1</i><div class="av s">${RUNSVG}</div><div class="nm"><b>You</b><br><small>${Math.floor(S.pts).toLocaleString()} pts</small></div></div><div class="empty">Other runners show up once sign-in is live</div>`:'<div class="empty">Friends will show up here</div>'},
+ runs(){const a=[...S.runs].sort((x,y)=>y.t-x.t).slice(0,60);return a.length?a.map(r=>{const l=S.loops.find(l=>l.id===r.id)||{name:'Loop',tier:1,p:[[0,0],[1,0]]};return`<div class="rw"><div class="th">${thumb(l.p,TC[l.tier])}</div><div class="nm"><b>${l.name}</b> ${chip(l.tier)}<br><small>${new Date(r.t).toLocaleDateString()}</small></div><div style="text-align:right"><b>${(r.km*MI).toFixed(2)} mi</b><br><small>${fmtT(r.sec)} · ${paceMi(r.sec/r.km)}/mi</small></div></div>`}).join(''):'<div class="empty">No runs yet. Draw a route with + and run it.</div>'},
+ me(){const km=S.runs.reduce((a,r)=>a+r.km,0),bp=S.runs.filter(r=>r.km>=1).map(r=>r.sec/r.km).sort((a,b)=>a-b)[0],mt=Math.max(0,...S.loops.filter(l=>l.claimed).map(l=>l.tier));
+  return`<div class="pf"><div class="av">${RUNSVG}</div><h2>@${esc(S.me.name)}</h2><small>${mt?'Top tier '+LB[mt]:'No tier yet'} · best ${bp?paceMi(bp)+'/mi':'–'}</small></div><div class="pst"><div><b>${S.loops.length}</b><small>Routes</small></div><div><b>${S.runs.length}</b><small>Runs</small></div><div><b>${(km*MI).toFixed(1)}</b><small>Miles</small></div></div>`+(S.loops.length?`<div class="g3">${S.loops.map(l=>`<div class="tl" data-loop="${l.id}">${thumb(l.p,TC[l.tier])}${chip(l.tier)}<small>${(l.km*MI).toFixed(1)} mi</small></div>`).join('')}</div>`:'<div class="empty">Your routes show up here</div>')}};
+function goP(p){if(dwOn&&p!=='map')setDraw(false);document.querySelectorAll('.tab').forEach(b=>b.classList.toggle('on',b.dataset.p===p));if(p==='map'){pg.hidden=true;return}
+ const hd=p==='ranks'?`<button data-rk="g" class="${rk==='g'?'on':''}">Global</button><button data-rk="f" class="${rk==='f'?'on':''}">Friends</button>`:`<b>${p==='runs'?'Runs':'@runner'}</b>`;pg.hidden=false;pg.innerHTML=`<div class="ph">${hd}</div>`+PGS[p]();pg.scrollTop=0}
+document.addEventListener('click',e=>{const b=e.target.closest('[data-p]');if(b)return goP(b.dataset.p);const k=e.target.closest('[data-rk]');if(k){rk=k.dataset.rk;return goP('ranks')}
+ const t=e.target.closest('[data-loop]');if(t){const L=S.loops.find(l=>l.id===t.dataset.loop);if(!L)return;sel=L.id;mode='loop';goP('map');card();refresh();{const xs=L.p.map(q=>q[0]),ys=L.p.map(q=>q[1]);map.fitBounds([[Math.min(...xs),Math.min(...ys)],[Math.max(...xs),Math.max(...ys)]],{padding:{top:90,bottom:300,left:40,right:80},duration:800,maxZoom:17})}}});
+
+const esc=t=>String(t).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+let fe=false,ch=null;
+const msgLine=m=>`<div class="ln"><b>${esc(S.me.name)}:</b> ${esc(m.x)} <small>${new Date(m.t).toLocaleTimeString([],{hour:'numeric',minute:'2-digit'})}</small></div>`;
+function buddyWin(){return`<div class="win"><div class="wt"><span>Buddy List</span><button data-fe>${fe?'Done':'Edit'}</button></div><div class="wb"><div class="grp">▾ Buddies (${S.friends.length})</div>${S.friends.map(f=>{const m=(S.msgs[f.id]||[]).slice(-1)[0];return`<div class="bd" data-chat="${f.id}"><div class="ini">${esc(f.name[0].toUpperCase())}</div><div class="nm"><b>${esc(f.name)}</b><br><small>${m?esc(m.x).slice(0,40):'Say hi'}</small></div>${fe?`<button class="x" data-del="${f.id}">✕</button>`:''}</div>`}).join('')||'<div class="empty" style="padding:18px">No buddies yet</div>'}<div class="add"><input id="nf" placeholder="Add a screen name" maxlength="20"><button class="btn" data-add style="height:34px;flex:none;padding:0 14px">Add</button></div></div></div>`}
+const meOld=PGS.me;
+PGS.me=function(){
+  const o=meOld(),i=o.indexOf('<div class="pst">');
+  const authBtn = currentUser
+    ? `<button class="btn g" onclick="signOut()" style="height:36px;margin-top:8px">Sign out</button>`
+    : `<button class="btn" onclick="signInWithGoogle()" style="height:36px;margin-top:8px">Sign in with Google</button>`;
+  return o.slice(0,i)
+    .replace('@runner',esc(S.me.name))
+    .replace('</small></div>','</small><p class="bio">'+(S.me.bio?esc(S.me.bio):'<small>No bio yet</small>')+'</p><button class="btn g" data-edit style="height:36px;margin-top:10px">Edit profile</button>'+authBtn+'</div>')
+    +o.slice(i)+buddyWin();
+};
+PGS.edit=()=>`<div class="win"><div class="wt"><span>Edit profile</span></div><div class="wb" style="padding:14px"><small>Screen name</small><input id="en" value="${esc(S.me.name)}" maxlength="20"><small>Bio</small><textarea id="eb" maxlength="160" rows="4">${esc(S.me.bio)}</textarea><div class="row" style="margin-top:6px"><button class="btn g" data-p="me">Cancel</button><button class="btn" data-saveprof>Save</button></div></div></div>`;
+PGS.chat=function(){const f=S.friends.find(x=>x.id===ch);if(!f)return PGS.me();return`<div class="chat"><div class="win"><div class="wt"><span>${esc(f.name)} · Instant Message</span><button data-p="me">✕</button></div><div class="wb cb"><div id="log"><div class="sys">Messages save on this device. ${esc(f.name)} gets them once sign-in goes live.</div>${(S.msgs[ch]||[]).map(msgLine).join('')}</div><div class="snd"><input id="mi" placeholder="Type a message" maxlength="400" autocomplete="off"><button class="btn" data-send style="height:40px;flex:none;padding:0 16px">Send</button></div></div></div></div>`};
+function goP(p){if(dwOn&&p!=='map')setDraw(false);const tp=p==='chat'||p==='edit'?'me':p;document.querySelectorAll('.tab').forEach(b=>b.classList.toggle('on',b.dataset.p===tp));if(p==='map'){pg.hidden=true;return}
+ const hd=p==='chat'?'':p==='ranks'?`<button data-rk="g" class="${rk==='g'?'on':''}">Global</button><button data-rk="f" class="${rk==='f'?'on':''}">Friends</button>`:`<b>${p==='runs'?'Runs':p==='edit'?'Edit profile':esc(S.me.name)}</b>`;pg.hidden=false;pg.innerHTML=(hd?`<div class="ph">${hd}</div>`:'')+PGS[p]();pg.scrollTop=0}
+function send(){const i=$('#mi'),x=i.value.trim();if(!x||!ch)return;const m={x,t:Date.now()};(S.msgs[ch]=S.msgs[ch]||[]).push(m);save();const l=$('#log');l.insertAdjacentHTML('beforeend',msgLine(m));l.scrollTop=l.scrollHeight;i.value='';i.focus()}
+document.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.id==='mi')send()});
+document.addEventListener('click',e=>{const q=a=>e.target.closest(a);
+ if(q('[data-edit]'))return goP('edit');
+ if(q('[data-saveprof]')){S.me.name=$('#en').value.trim()||'runner';S.me.bio=$('#eb').value.trim();save();queueCloudSync(100);toast('Profile saved');return goP('me')}
+ if(q('[data-fe]')){fe=!fe;return goP('me')}
+ if(q('[data-add]')){const n=$('#nf').value.trim();if(!n)return;if(S.friends.some(f=>f.name.toLowerCase()===n.toLowerCase()))return toast('Already a buddy');S.friends.push({id:'f'+Date.now(),name:n});save();return goP('me')}
+ const d=q('[data-del]');if(d){S.friends=S.friends.filter(f=>f.id!==d.dataset.del);delete S.msgs[d.dataset.del];save();return goP('me')}
+ const c=q('[data-chat]');if(c){ch=c.dataset.chat;goP('chat');const l=$('#log');if(l)l.scrollTop=l.scrollHeight;return}
+ if(q('[data-send]'))return send()});
+
+function mapThumb(l,done,W=480,H=130,fw=300,fh=84){let a=1e9,b=-1e9,c=1e9,d=-1e9;l.p.forEach(q=>{a=Math.min(a,q[0]);b=Math.max(b,q[0]);c=Math.min(c,q[1]);d=Math.max(d,q[1])});
+ const wx=(o,z)=>(o+180)/360*256*2**z,wy=(t,z)=>(1-Math.log(Math.tan(t*Math.PI/180)+1/Math.cos(t*Math.PI/180))/Math.PI)/2*256*2**z;
+ let z=17;for(;z>10;z--)if(wx(b,z)-wx(a,z)<=fw&&wy(c,z)-wy(d,z)<=fh)break;
+ const cx=(wx(a,z)+wx(b,z))/2-W/2,cy=(wy(c,z)+wy(d,z))/2-H/2,n=2**z;let im='';
+ for(let tx=Math.floor(cx/256);tx<=Math.floor((cx+W)/256);tx++)for(let ty=Math.floor(cy/256);ty<=Math.floor((cy+H)/256);ty++){if(ty<0||ty>=n)continue;const X=((tx%n)+n)%n;im+=`<img loading="lazy" alt="" src="https://${'abc'[(X+ty)%3]}.tile.openstreetmap.org/${z}/${X}/${ty}.png" style="left:${Math.round(tx*256-cx)}px;top:${Math.round(ty*256-cy)}px">`}
+ const st=Math.max(1,Math.floor(l.p.length/120)),pp=l.p.filter((_,i)=>i%st===0).map(q=>(wx(q[0],z)-cx).toFixed(1)+','+(wy(q[1],z)-cy).toFixed(1)).join(' ');
+ return`<div class="mt${done?' dn':''}" style="height:${H}px"><div class="stg" style="width:${W}px;height:${H}px;margin-left:-${W/2}px">${im}<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}"><polyline class="mo" points="${pp}"/><polyline class="mc" points="${pp}"/></svg></div>${done?'<b class="ck">✓</b>':''}</div>`}
+const oldRuns=PGS.runs;
+PGS.runs=function(){if(!S.loops.length)return'<div class="empty">No routes yet. Tap the pencil on the map to sketch one.</div>';
+ const cards=[...S.loops].sort((x,y)=>y.id.slice(1)-x.id.slice(1)).map(l=>{const rs=S.runs.filter(r=>r.id===l.id),best=rs.map(r=>r.sec/r.km).sort((p,q)=>p-q)[0];
+  return`<div class="rc${l.claimed?' dn':''}" style="--c:${TC[l.tier]}" data-loop="${l.id}">${mapThumb(l,l.claimed)}<div class="ri"><div class="nm"><b>${esc(l.name)}</b><br><small>${(l.km*MI).toFixed(2)} mi · ${l.claimed?rs.length+(rs.length===1?' run':' runs')+' · best '+paceMi(best)+'/mi':'Not run yet · finish it to earn points'}</small></div>${chip(l.tier)}</div></div>`}).join('');
+ return cards+(S.runs.length?'<div class="hdv">History</div>'+oldRuns():'')};
+
+function goDir(){const T=draft||S.loops.find(l=>l.id===sel);if(!T)return;let d=T.p[0];if(here){let m=1e12;T.p.forEach(q=>{const x=dist(here,q);if(x<m){m=x;d=q}})}else{watch();toast('Using the route start')}window.open('https://www.google.com/maps/dir/?api=1&destination='+d[1].toFixed(6)+','+d[0].toFixed(6),'_blank')}
+function startHere(){const L=S.loops.find(l=>l.id===sel);if(!L)return;if(!here){watch();return toast('Waiting for GPS')}let m=1e12;L.p.forEach(q=>{m=Math.min(m,dist(here,q))});if(m>150)return toast("You're "+(m/1000*MI).toFixed(1)+" mi from this loop · tap Directions");start(false)}
+function qaShow(){const T=draft||S.loops.find(l=>l.id===sel),q=$('#qa'),un=S.loops.filter(l=>!l.claimed).length;
+ q.innerHTML=`<div class="qh">${T?`<b>${esc(T.name||'New route')}</b>${mi1(T.km)} mi · ${LB[T.tier]}`:'<b>No run highlighted</b>Tap a saved route first'}</div><button class="btn g" data-q="dr" ${T?'':'disabled'}>Directions</button><button class="btn" data-q="go" ${sel&&!draft?'':'disabled'}>Start run</button><small style="display:block;text-align:center;margin-top:10px">${un}/3 unfinished routes</small>`;
+ q.classList.toggle('on');$('#dw').classList.toggle('on',q.classList.contains('on'))}
+$('#dw').onclick=()=>{if(run)return toast('Run in progress');goP('map');qaShow()};
+$('#qa').onclick=e=>{const b=e.target.closest('[data-q]');if(!b||b.disabled)return;$('#qa').classList.remove('on');$('#dw').classList.remove('on');b.dataset.q==='dr'?goDir():startHere()};
+document.addEventListener('pointerdown',e=>{if(!e.target.closest('#qa,#dw')){$('#qa').classList.remove('on');$('#dw').classList.remove('on')}});
+const runs2=PGS.runs;PGS.runs=function(){const n=S.loops.filter(l=>!l.claimed).length;return(S.loops.length?`<div class="hdv">Unfinished routes ${n}/3</div>`:'')+runs2()};
+</script></body></html>
