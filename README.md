@@ -1,2 +1,0 @@
-# runfront-
-run competitively 
